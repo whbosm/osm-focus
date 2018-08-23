@@ -152,6 +152,7 @@ public class OsmTile {
 			//Log.d(TAG, "Loading tile "+tileurl);
 			URL url = new URL(tileurl);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestProperty("User-Agent", MainActivity.userAgent);
 			conn.setDoInput(true);
 			//Log.d(TAG, "Connect for tile download");
 			conn.connect();

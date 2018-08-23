@@ -35,6 +35,7 @@ import android.hardware.SensorManager;
 import android.location.GpsSatellite;
 import android.location.GpsStatus;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -56,34 +57,27 @@ import android.view.ScaleGestureDetector;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesClient;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.location.LocationClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-
 public class MainActivity extends Activity implements
-				GooglePlayServicesClient.ConnectionCallbacks,
-				GooglePlayServicesClient.OnConnectionFailedListener,
 				LocationListener, GpsStatus.Listener,
 				SensorEventListener {
 	
-	static final int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
     static final int PREFERENCE_REQUEST   = 9001;
 	static final int INVALIDATE_VIEW      = 1000;
 	static final int POLL_NOTIFICATIONS   = 1001;
+
+	private static final int LOCATION_INTERVAL = 1000; //ms
+	private static final float LOCATION_DISTANCE = 1f; //meters
+
+	public static final String userAgent = "OSMfocus";
 
 	private static final String TAG = "OsmFocusActivity";
 	public static final String PREFS_NAME = "OSMFocusPrefsFile";
 
 	LocationManager mLocationManager;
-	LocationClient mLocationClient;
-	LocationRequest mLocationRequest;
 	
 	SensorManager sensorManager;
 	private Sensor sensorAccelerometer;
-	private Sensor sensorMagneticField;   
+	private Sensor sensorMagneticField;
 	private float[] valuesAccelerometer;
 	private float[] valuesMagneticField;
 	private float[] matrixR;
@@ -91,7 +85,7 @@ public class MainActivity extends Activity implements
 	private float[] matrixValues;
 	private MapView mapView;
     double mPanLon, mPanLat;
-	private OsmServer mOsmServer = new OsmServer(null, "Editor");
+	private OsmServer mOsmServer = new OsmServer(null, userAgent);
 	private GestureDetectorCompat mGestureDetector;
 	private ScaleGestureDetector mScaleGestureDetector;
 	private boolean mScaleInProgress = false;
@@ -196,30 +190,14 @@ public class MainActivity extends Activity implements
         Location loc = getMostRecentKnownLocation();
         if (loc != null)
         	this.onLocationChanged(loc);  
-        
-        mLocationClient = new LocationClient(this, this, this);
-        mLocationRequest = LocationRequest.create();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setInterval(1000/*ms*/);
-        mLocationRequest.setFastestInterval(500/*ms*/);
-        
-        //locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        //if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-        //	Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-        //	startActivity(intent);
-        //}
-        //Criteria criteria = new Criteria();
-        //mG.mLocProvider = locationManager.getBestProvider(criteria, false);
-        //mG.mLocProvider = locationManager.GPS_PROVIDER;
-        //Location location = locationManager.getLastKnownLocation(mG.mLocProvider);
-        //if (location != null) {
-        //    Toast toast = Toast.makeText(getApplicationContext(), "Location provider "+mG.mLocProvider, Toast.LENGTH_SHORT);
-        //    toast.show();
-        //    //onLocationChanged(location);
-        //}
 
-        //Location location = new Location("FIXME");
-        //Location location = mLocationClient.getLastLocation();
+		if (mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+			mLocationManager.requestLocationUpdates(
+					LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, this);
+		} else if (mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+			mLocationManager.requestLocationUpdates(
+					LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, this);
+		}
 
         if (mG.mUseCompass) {
         	sensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
@@ -231,15 +209,6 @@ public class MainActivity extends Activity implements
         	matrixI = new float[9];
         	matrixValues = new float[3];
         }
-        
-        // Initialize the location fields
-        //if (location != null) {
-        //  Log.d(TAG, "Provider " + mG.mLocProvider + " has been selected.");
-        //  onLocationChanged(location);
-        //} else {
-          //latituteField.setText("Location not available");
-          //longitudeField.setText("Location not available");
-        //}
         
         //registerForContextMenu(mapView);
         
@@ -277,7 +246,6 @@ public class MainActivity extends Activity implements
     @Override
     protected void onStart() {
         super.onStart();
-        mLocationClient.connect();
     }
 
     /*
@@ -285,10 +253,6 @@ public class MainActivity extends Activity implements
      */
     @Override
     protected void onStop() {
-    	if (mLocationClient.isConnected()) {
-    		mLocationClient.removeLocationUpdates(this);
-        }
-        mLocationClient.disconnect();
         super.onStop();
     }
     
@@ -315,37 +279,10 @@ public class MainActivity extends Activity implements
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-            case CONNECTION_FAILURE_RESOLUTION_REQUEST:
-            /*
-             * If the result code is Activity.RESULT_OK, try
-             * to connect again
-             */
-                switch (resultCode) {
-                    case Activity.RESULT_OK:
-                    break;
-                }
             case PREFERENCE_REQUEST:
     			mG.update(getBaseContext());
     			mapView.postInvalidate();                          
             	break;
-        }
-    }
-
-	private boolean servicesConnected() {
-        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if (ConnectionResult.SUCCESS == resultCode) {
-            Log.d("Location Updates", "Google Play services is available.");
-            return true;
-        } else {
-            //int errorCode = GooglePlayServicesUtil.getErrorCode();
-            Dialog errorDialog = GooglePlayServicesUtil.getErrorDialog(resultCode, this,
-                    							CONNECTION_FAILURE_RESOLUTION_REQUEST);
-            if (errorDialog != null) {
-            	errorDialog.show();
-            } else {
-            	showOkDialog(this, "Something went wrong with Google Play Services");
-            }
-            return false;
         }
     }
     
@@ -358,42 +295,7 @@ public class MainActivity extends Activity implements
         AlertDialog dialog = builder.create();
         dialog.show();
     }
-    
-    @Override
-    public void onConnected(Bundle dataBundle) {
-    	Log.d(TAG, "onConnected");
-        mLocationClient.requestLocationUpdates(mLocationRequest, this);
-    }
 
-    @Override
-    public void onDisconnected() {
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        if (connectionResult.hasResolution()) {
-            try {
-                // Start an Activity that tries to resolve the error
-                connectionResult.startResolutionForResult(
-                        this,
-                        CONNECTION_FAILURE_RESOLUTION_REQUEST);
-                /*
-                * Thrown if Google Play services canceled the original
-                * PendingIntent
-                */
-            } catch (IntentSender.SendIntentException e) {
-                // Log the error
-                e.printStackTrace();
-            }
-        } else {
-            /*
-             * If no resolution is available, display a dialog to the
-             * user with the error.
-             */
-            //showErrorDialog(connectionResult.getErrorCode());
-        }
-    }
-    
     @Override 
     public boolean onTouchEvent(MotionEvent event){
         boolean h = mScaleGestureDetector.onTouchEvent(event);
@@ -610,6 +512,21 @@ public class MainActivity extends Activity implements
         	mapView.postInvalidate();
         }
     }
+
+	@Override
+	public void onProviderDisabled(String provider) {
+		//Log.e(TAG, "onProviderDisabled: " + provider);
+	}
+
+	@Override
+	public void onProviderEnabled(String provider) {
+		//Log.e(TAG, "onProviderEnabled: " + provider);
+	}
+
+	@Override
+	public void onStatusChanged(String provider, int status, Bundle extras) {
+		//Log.e(TAG, "onStatusChanged: " + provider);
+	}
 
     public void onGpsStatusChanged(int event) {
     	boolean statchg = false;

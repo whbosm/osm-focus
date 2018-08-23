@@ -43,9 +43,9 @@ public abstract class OsmTileLayer extends MapLayer {
 
 	static String urlFromType(int type) {
 		if (type==MapLayer.MAPTYPE_OSM) {
-			return "http://a.tile.openstreetmap.org";
+			return "https://a.tile.openstreetmap.org";
 		} else if (type==MapLayer.MAPTYPE_OSMCYCLEMAP) {
-			return "http://a.tile.opencyclemap.org/cycle";    			
+			return "http://a.tile.opencyclemap.org/cycle";
 		}
 		return "";
 	}
