@@ -1,3 +1,5 @@
+//This file has been modified by whb.
+
 package dk.network42.osmfocus;
 
 import java.io.IOException;

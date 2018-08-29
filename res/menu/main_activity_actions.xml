@@ -1,3 +1,4 @@
+<!-- This file has been modified by whb. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:id="@+id/action_whereami"
@@ -11,5 +12,8 @@
     <item android:id="@+id/action_settings"
           android:title="@string/action_settings"
           android:showAsAction="never" />
+    <item
+        android:id="@+id/action_license"
+        android:title="License" />
 
 </menu>

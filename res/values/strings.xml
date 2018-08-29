@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- This file has been modified by whb. -->
 <resources>
 
     <string name="app_name">OSMfocus</string>
@@ -19,21 +20,22 @@
     <string name="info_errdownloadarea">Could not download area!</string>
     <string name="info_notshowpoiatzoomlevel">POIs not shown at high zoom levels</string>
     <string name="info_notshowvectoratzoomlevel">Vector data not shown at high zoom levels</string>
-    
+
     <string name="pref_autoload">Auto Download</string>
     <string name="pref_autoload_summ">Enable automatic download of map data</string>
-    
+
     <string name="pref_wireframe">Wireframe Map</string>
     <string name="pref_poilines">Show POI lines</string>
-    
+
     <string name="pref_poinum">Number of POIs on screen</string>
     <string name="pref_poinum_summ">Number of POIs on screen</string>
-    
+
     <string name="pref_labelsize">POI Label Size</string>
     <string name="pref_labelsize_summ">Size of font used for element labels</string>
 
     <string name="pref_backmap">Background Map Type</string>
     <string name="pref_backmap_summ">Type of background map to show</string>
-    
-    <string name="info_osm_copyright">&#169; OpenStreetMap contributors</string>
+
+    <string name="info_osm_copyright">&#169; OpenStreetMap contributors, ODbL</string>
+    <string name="title_activity_license">LicenseActivity</string>
 </resources>
