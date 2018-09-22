@@ -28,6 +28,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
@@ -51,6 +52,7 @@ public class MainActivity extends Activity implements
     public static final String userAgent = "OSMfocus";
     public static final String PREFS_NAME = "OSMFocusPrefsFile";
     static final int PREFERENCE_REQUEST = 9001;
+    static final int PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 9002;
     static final int INVALIDATE_VIEW = 1000;
     static final int POLL_NOTIFICATIONS = 1001;
     private static final int LOCATION_INTERVAL = 1000; //ms
@@ -413,30 +415,7 @@ public class MainActivity extends Activity implements
         super.onResume();
         //locationManager.requestLocationUpdates(mG.mLocProvider, 1000/*ms*/, 1/*meters*/, this);
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (mLocationManager != null) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED) {
-                mLocationManager.addGpsStatusListener(this);
-            }
-
-            Location loc = getMostRecentKnownLocation();
-            if (loc != null)
-                this.onLocationChanged(loc);
-
-            if (mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED) {
-                    mLocationManager.requestLocationUpdates(
-                            LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, this);
-                }
-            } else if (mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED) {
-                    mLocationManager.requestLocationUpdates(
-                            LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, this);
-                }
-            }
-        }
+        checkAndRequestLocationUpdates();
 
         if (mG.mUseCompass) {
             sensorManager.registerListener(this,
@@ -486,6 +465,56 @@ public class MainActivity extends Activity implements
             }
         }
         return loc;
+    }
+
+    private void checkAndRequestLocationUpdates() {
+        if (mLocationManager != null) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED) {
+                mLocationManager.addGpsStatusListener(this);
+            } else {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.ACCESS_FINE_LOCATION)) {
+                } else {
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                            PERMISSION_REQUEST_ACCESS_FINE_LOCATION);
+                }
+            }
+
+            Location loc = getMostRecentKnownLocation();
+            if (loc != null)
+                this.onLocationChanged(loc);
+
+            if (mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    mLocationManager.requestLocationUpdates(
+                            LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, this);
+                }
+            } else if (mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    mLocationManager.requestLocationUpdates(
+                            LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, this);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int request, String permissions[], int[] granted) {
+        switch (request) {
+            case PERMISSION_REQUEST_ACCESS_FINE_LOCATION: {
+                if (granted.length > 0 && granted[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Location permission granted!", Toast.LENGTH_LONG).show();
+                    checkAndRequestLocationUpdates();
+                } else {
+                    Toast.makeText(this, "Location permission denied!", Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
+        }
     }
 
     @Override
